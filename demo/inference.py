@@ -104,8 +104,11 @@ class LiveInfer:
         frame_idx = int(video_time * self.frame_fps)
         if frame_idx > self.last_frame_idx:
             ranger = range(self.last_frame_idx + 1, frame_idx + 1)
+            # video_tensor: (T, C, H, W)
             frames_embeds = self.model.visual_embed(self.video_tensor[ranger]).split(self.frame_num_tokens)
+            # frames_embeds是一个tuple, 形状为(torch.Size([1, 10, 1024]),)
             self.frame_embeds_queue.extend([(r / self.frame_fps, frame_embeds) for r, frame_embeds in zip(ranger, frames_embeds)])
+            # self.frame_embeds_queue的数据格式为 [(sec_stamp, frame_embeds), ...] frame_embeds原本是
         self.last_frame_idx = frame_idx
         self.video_time = video_time
     

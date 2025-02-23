@@ -7,24 +7,34 @@ from transformers.utils.constants import OPENAI_CLIP_MEAN, OPENAI_CLIP_STD
 
 from .configuration_live import LiveConfigMixin
 
+
+# 帧编码操作
 def _siglip_vision_encode(vision_model: nn.Module, frames: Tensor, frame_token_cls: bool, frame_token_pooled: tuple,
     mean=[0.5,0.5,0.5], std=[0.5,0.5,0.5], rescale_factor=0.00392156862745098, **kwargs):
+    # 0.00392156862745098 = 1/255,相当于像素归一化
+    # frame_token_pooled: [3, 3] -> 9
     frames = normalize(frames * rescale_factor, mean=mean, std=std)
     with torch.cuda.amp.autocast():
         vision_outputs = vision_model(frames)
+        # vision_outputs['pooler_output'].shape = [batch, 1024]
         last_hidden_state = vision_outputs.last_hidden_state
+        # last_hidden_state.shape = [batch, 384/16 * 384/16=576, 1024]
         if frame_token_pooled:
             s = int(math.sqrt(last_hidden_state.shape[1]))
             spatial_tokens = torch.nn.functional.adaptive_avg_pool2d(
+                # reshape、permute之后: torch.Size([batch, 1024, patch_token:24, patch_token:24])
                 last_hidden_state.reshape(
                     last_hidden_state.shape[0], s, s, last_hidden_state.shape[-1]
                 ).permute(0, 3, 1, 2),
-                frame_token_pooled
+                frame_token_pooled # target size = frame_token_pooled = [3, 3]
             ).flatten(2, 3).permute(0, 2, 1)
+            # spatial_tokens shape: [batch, 9, 1024]
+
             if not frame_token_cls:
                 return spatial_tokens
         if frame_token_cls:
             cls_token = vision_outputs.pooler_output[:, None]
+            # cls_token shape: [batch, 1, 1024]
             if not frame_token_pooled:
                 return cls_token
     return torch.cat([cls_token, spatial_tokens], dim=1)
