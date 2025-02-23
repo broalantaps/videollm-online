@@ -91,6 +91,7 @@ class LiveInfer:
         self.past_key_values = None
 
     def input_query_stream(self, query, history=None, video_time=None):
+        # 在队列中加入query, 队列里面的数据格式为 [(sec_stamp, query), ...]
         if video_time is None:
             self.query_queue.append((self.video_time, query))
         else:
@@ -110,8 +111,8 @@ class LiveInfer:
     
     def load_video(self, video_path):
         self.video_tensor = read_video(video_path, pts_unit='sec', output_format='TCHW')[0].to('cuda')
-        self.num_video_frames = self.video_tensor.size(0)
-        self.video_duration = self.video_tensor.size(0) / self.frame_fps
+        self.num_video_frames = self.video_tensor.size(0) # 总帧数: 2fps的话就是2*视频时长
+        self.video_duration = self.video_tensor.size(0) / self.frame_fps # 视频时长
         logger.warning(f'{video_path} -> {self.video_tensor.shape}, {self.frame_fps} FPS')
 
     def __call__(self, ):
