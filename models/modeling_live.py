@@ -12,8 +12,9 @@ class LiveMixin(AutoModelForCausalLM):
     def set_vision_inside(self):
         logger.warning_once("!!! Set vision encoder in the model, only recommended for on in-the-wild inference. "
             "Please dont call this for efficient training & evaluation. Instead, do visual feature pre-extraction.")
+        # vision_encoder是model, vision_encode是用于encode的函数
         self.vision_encoder, self.vision_encode = build_live_vision(self.config)
-
+        
     def unset_vision_inside(self):
         del self.vision_encoder
         del self.vision_encode

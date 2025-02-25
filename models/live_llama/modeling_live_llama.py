@@ -55,7 +55,9 @@ class LiveLlamaForCausalLM(LlamaForCausalLM, LiveMixin):
         loss = None
         if labels is not None:
             logits = outputs[0]
+            # flatten(0, 1) 将第0维和第1维合并
             v_mask = input_ids.flatten(0, 1) == self.config.v_placeholder_id
+            # 对于v_mask为True的位置，设定权重为stream_loss_weight，正常文本为1
             weight = v_mask * self.config.stream_loss_weight + ~v_mask
             loss = nn.functional.cross_entropy(logits.flatten(0, 1), labels.flatten(), reduction='none') * weight
             loss = loss.sum() / (labels >= 0).sum()
